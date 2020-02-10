@@ -53,7 +53,7 @@ all_project_ci_{{ editor.version }}:
     logs:
       paths:
         - "**/test-results/**"
-  {% if editor.version == "trunk" or if editor.version == "fast-trunk" %}
+  {% if editor.version == "fast-trunk" %}
   triggers:
     branches:
       only:
