@@ -21,7 +21,7 @@ namespace UnityEditor.Rendering.Universal
 
     class MaterialReimporter : Editor
     {
-        const string Key = "LWRP-material-upgrader";
+        const string Key = "URP-material-upgrade-version";
 
         // Upgrade materials only after we compiled shaders.
         // This fixes a case that caused ReloadAllNullIn to be called before shaders finished compiling.
@@ -31,18 +31,18 @@ namespace UnityEditor.Rendering.Universal
             //Check to see if the upgrader has been run for this project/LWRP version
             PackageManager.PackageInfo lwrpInfo = PackageManager.PackageInfo.FindForAssembly(Assembly.GetAssembly(typeof(UniversalRenderPipeline)));
             var lwrpVersion = lwrpInfo.version;
-            var curUpgradeVersion = PlayerPrefs.GetString(Key);
+            var curUpgradeVersion = EditorUtils.GetProjectValue(Key);
 
             if (curUpgradeVersion != lwrpVersion)
             {
-                string[] guids = AssetDatabase.FindAssets("t:material", null);
+                var guids = AssetDatabase.FindAssets("t:material", null);
 
                 foreach (var asset in guids)
                 {
                     var path = AssetDatabase.GUIDToAssetPath(asset);
                     AssetDatabase.ImportAsset(path);
                 }
-                PlayerPrefs.SetString(Key, lwrpVersion);
+                EditorUtils.SetProjectValue(Key, lwrpVersion);
             }
         }
     }

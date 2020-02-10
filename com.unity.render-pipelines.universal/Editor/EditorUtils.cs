@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -24,6 +25,8 @@ namespace UnityEditor.Rendering.Universal
         public const int lwrpAssetCreateMenuPriorityGroup1 = CoreUtils.assetCreateMenuPriority1;
         public const int lwrpAssetCreateMenuPriorityGroup2 = CoreUtils.assetCreateMenuPriority1 + 50;
         public const int lwrpAssetCreateMenuPriorityGroup3 = lwrpAssetCreateMenuPriorityGroup2 + 50;
+
+        private const string SettingsFilePath = "/ProjectSettings/UniversalRP_Settings.txt";
 
         internal class Styles
         {
@@ -68,6 +71,51 @@ namespace UnityEditor.Rendering.Universal
                     }
                 }
             }
+        }
+
+        internal static void SetProjectValue(string key, string value)
+        {
+            var dict = ReadSettings();
+
+            if (dict != null && dict.ContainsKey(key))
+            {
+                dict[key] = value;
+            }
+            else
+            {
+                dict.Add(key, value);
+            }
+            WriteSettings(dict);
+        }
+
+        internal static string GetProjectValue(string key)
+        {
+            var dict = ReadSettings();
+            return (dict != null && dict.ContainsKey(key)) ? dict[key] : "null";
+        }
+
+        private static SerializedDictionary<string, string> ReadSettings()
+        {
+            if (!File.Exists(SettingsPath()))
+            {
+                File.WriteAllText(SettingsPath(), "");
+            }
+            var rawData = File.ReadAllText(SettingsPath());
+            if(rawData.Length == 0)
+                return new SerializedDictionary<string, string>();
+            return JsonUtility.FromJson(rawData, typeof(SerializedDictionary<string, string>)) as
+                SerializedDictionary<string, string>;
+        }
+
+        private static void WriteSettings(SerializedDictionary<string, string> data)
+        {
+            var outputData = JsonUtility.ToJson(data);
+            File.WriteAllText(SettingsPath(), outputData);
+        }
+
+        private static string SettingsPath()
+        {
+            return Application.dataPath.Remove(Application.dataPath.Length - 6) + SettingsFilePath;
         }
     }
 }
