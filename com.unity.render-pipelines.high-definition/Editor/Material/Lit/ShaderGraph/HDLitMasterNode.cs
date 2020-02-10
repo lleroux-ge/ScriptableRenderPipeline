@@ -17,7 +17,7 @@ using static UnityEngine.Rendering.HighDefinition.HDMaterialProperties;
 namespace UnityEditor.Rendering.HighDefinition
 {
     [Serializable]
-    [Title("Master", "HDRP/Lit")]
+    [Title("Master", "Lit (HDRP)")]
     [FormerName("UnityEditor.Experimental.Rendering.HDPipeline.HDLitMasterNode")]
     [FormerName("UnityEditor.ShaderGraph.HDLitMasterNode")]
     class HDLitMasterNode : MasterNode<IHDLitSubShader>, IMayRequirePosition, IMayRequireNormal, IMayRequireTangent
@@ -471,6 +471,23 @@ namespace UnityEditor.Rendering.HighDefinition
         }
 
         [SerializeField]
+        NormalDropOffSpace m_NormalDropOffSpace;
+        public NormalDropOffSpace normalDropOffSpace
+        {
+            get { return m_NormalDropOffSpace; }
+            set
+            {
+                if (m_NormalDropOffSpace == value)
+                    return;
+
+                m_NormalDropOffSpace = value;
+                UpdateNodeAfterDeserialization();
+                Dirty(ModificationScope.Topological);
+            }
+        }
+
+
+        [SerializeField]
         MaterialType m_MaterialType;
 
         public MaterialType materialType
@@ -672,21 +689,6 @@ namespace UnityEditor.Rendering.HighDefinition
         }
 
         [SerializeField]
-        bool m_DOTSInstancing = false;
-        public ToggleData dotsInstancing
-        {
-            get { return new ToggleData(m_DOTSInstancing); }
-            set
-            {
-                if (m_DOTSInstancing == value.isOn)
-                    return;
-
-                m_DOTSInstancing = value.isOn;
-                Dirty(ModificationScope.Graph);
-            }
-        }
-
-        [SerializeField]
         bool m_ZWrite = false;
         public ToggleData zWrite
         {
@@ -749,6 +751,21 @@ namespace UnityEditor.Rendering.HighDefinition
             }
         }
 
+        [SerializeField]
+        int m_MaterialNeedsUpdateHash = 0;
+
+        int ComputeMaterialNeedsUpdateHash()
+        {
+            int hash = 0;
+
+            hash |= (alphaTest.isOn ? 0 : 1) << 0;
+            hash |= (alphaTestShadow.isOn ? 0 : 1) << 1;
+            hash |= (receiveSSR.isOn ? 0 : 1) << 2;
+            hash |= (RequiresSplitLighting() ? 0 : 1) << 3;
+
+            return hash;
+        }
+
         public HDLitMasterNode()
         {
             UpdateNodeAfterDeserialization();
@@ -756,7 +773,7 @@ namespace UnityEditor.Rendering.HighDefinition
 
         public override string documentationURL
         {
-            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/HD-Lit-Master-Node"; }
+            get { return null; }
         }
 
         public bool HasRefraction()
@@ -797,7 +814,23 @@ namespace UnityEditor.Rendering.HighDefinition
             }
             if (MaterialTypeUsesSlotMask(SlotMask.Normal))
             {
-                AddSlot(new NormalMaterialSlot(NormalSlotId, NormalSlotName, NormalSlotName, CoordinateSpace.Tangent, ShaderStageCapability.Fragment));
+                RemoveSlot(NormalSlotId);
+
+                var coordSpace = CoordinateSpace.Tangent;
+                switch (m_NormalDropOffSpace)
+                {
+                    case NormalDropOffSpace.Tangent:
+                        coordSpace = CoordinateSpace.Tangent;
+                        break;
+                    case NormalDropOffSpace.World:
+                        coordSpace = CoordinateSpace.World;
+                        break;
+                    case NormalDropOffSpace.Object:
+                        coordSpace = CoordinateSpace.Object;
+                        break;
+                }
+
+                AddSlot(new NormalMaterialSlot(NormalSlotId, NormalSlotName, NormalSlotName, coordSpace, ShaderStageCapability.Fragment));
                 validSlots.Add(NormalSlotId);
             }
             if (MaterialTypeUsesSlotMask(SlotMask.BentNormal))
@@ -1019,6 +1052,21 @@ namespace UnityEditor.Rendering.HighDefinition
             HDLitGUI.SetupMaterialKeywordsAndPass(previewMaterial);
         }
 
+        public override object saveContext
+        {
+            get
+            {
+                int hash = ComputeMaterialNeedsUpdateHash();
+
+                bool needsUpdate = hash != m_MaterialNeedsUpdateHash;
+
+                if (needsUpdate)
+                    m_MaterialNeedsUpdateHash = hash;
+
+                return new HDSaveContext{ updateMaterials = needsUpdate };
+            }
+        }
+
         public override void CollectShaderProperties(PropertyCollector collector, GenerationMode generationMode)
         {
             // Trunk currently relies on checking material property "_EmissionColor" to allow emissive GI. If it doesn't find that property, or it is black, GI is forced off.
@@ -1061,7 +1109,8 @@ namespace UnityEditor.Rendering.HighDefinition
                 zWrite.isOn,
                 transparentCullMode,
                 zTest,
-                backThenFrontRendering.isOn
+                backThenFrontRendering.isOn,
+                transparencyFog.isOn
             );
             HDSubShaderUtilities.AddAlphaCutoffShaderProperties(collector, alphaTest.isOn, alphaTestShadow.isOn);
             HDSubShaderUtilities.AddDoubleSidedProperty(collector, doubleSidedMode);

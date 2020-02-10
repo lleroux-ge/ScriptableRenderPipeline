@@ -17,7 +17,7 @@ using static UnityEngine.Rendering.HighDefinition.HDMaterialProperties;
 namespace UnityEditor.Rendering.HighDefinition
 {
     [Serializable]
-    [Title("Master", "HDRP/Fabric")]
+    [Title("Master", "Fabric (HDRP)")]
     [FormerName("UnityEditor.Experimental.Rendering.HDPipeline.FabricMasterNode")]
     [FormerName("UnityEditor.ShaderGraph.FabricMasterNode")]
     class FabricMasterNode : MasterNode<IFabricSubShader>, IMayRequirePosition, IMayRequireNormal, IMayRequireTangent
@@ -229,38 +229,6 @@ namespace UnityEditor.Rendering.HighDefinition
                 if (m_AlphaTest == value.isOn)
                     return;
                 m_AlphaTest = value.isOn;
-                UpdateNodeAfterDeserialization();
-                Dirty(ModificationScope.Topological);
-            }
-        }
-
-        [SerializeField]
-        bool m_AlphaTestDepthPrepass;
-
-        public ToggleData alphaTestDepthPrepass
-        {
-            get { return new ToggleData(m_AlphaTestDepthPrepass); }
-            set
-            {
-                if (m_AlphaTestDepthPrepass == value.isOn)
-                    return;
-                m_AlphaTestDepthPrepass = value.isOn;
-                UpdateNodeAfterDeserialization();
-                Dirty(ModificationScope.Topological);
-            }
-        }
-
-        [SerializeField]
-        bool m_AlphaTestDepthPostpass;
-
-        public ToggleData alphaTestDepthPostpass
-        {
-            get { return new ToggleData(m_AlphaTestDepthPostpass); }
-            set
-            {
-                if (m_AlphaTestDepthPostpass == value.isOn)
-                    return;
-                m_AlphaTestDepthPostpass = value.isOn;
                 UpdateNodeAfterDeserialization();
                 Dirty(ModificationScope.Topological);
             }
@@ -518,6 +486,20 @@ namespace UnityEditor.Rendering.HighDefinition
             }
         }
 
+        [SerializeField]
+        int m_MaterialNeedsUpdateHash = 0;
+
+        int ComputeMaterialNeedsUpdateHash()
+        {
+            int hash = 0;
+
+            hash |= (alphaTest.isOn ? 0 : 1) << 0;
+            hash |= (receiveSSR.isOn ? 0 : 1) << 1;
+            hash |= (RequiresSplitLighting() ? 0 : 1) << 2;
+
+            return hash;
+        }
+
         public FabricMasterNode()
         {
             UpdateNodeAfterDeserialization();
@@ -757,6 +739,21 @@ namespace UnityEditor.Rendering.HighDefinition
             FabricGUI.SetupMaterialKeywordsAndPass(previewMaterial);
         }
 
+        public override object saveContext
+        {
+            get
+            {
+                int hash = ComputeMaterialNeedsUpdateHash();
+
+                bool needsUpdate = hash != m_MaterialNeedsUpdateHash;
+
+                if (needsUpdate)
+                    m_MaterialNeedsUpdateHash = hash;
+
+                return new HDSaveContext{ updateMaterials = needsUpdate };
+            }
+        }
+
         public override void CollectShaderProperties(PropertyCollector collector, GenerationMode generationMode)
         {
             // Trunk currently relies on checking material property "_EmissionColor" to allow emissive GI. If it doesn't find that property, or it is black, GI is forced off.
@@ -792,7 +789,8 @@ namespace UnityEditor.Rendering.HighDefinition
                 zWrite.isOn,
                 transparentCullMode,
                 zTest,
-                false
+                false,
+                transparencyFog.isOn
             );
             HDSubShaderUtilities.AddAlphaCutoffShaderProperties(collector, alphaTest.isOn, false);
             HDSubShaderUtilities.AddDoubleSidedProperty(collector, doubleSidedMode);
