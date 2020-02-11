@@ -3,6 +3,8 @@ using UnityEngine.Rendering;
 
 // Include material common properties names
 using static UnityEngine.Rendering.HighDefinition.HDMaterialProperties;
+using UnityEditor.ShaderGraph;
+using UnityEditor.Rendering.HighDefinition.ShaderGraph;
 
 namespace UnityEditor.Rendering.HighDefinition
 {
@@ -16,7 +18,7 @@ namespace UnityEditor.Rendering.HighDefinition
             ^ SurfaceOptionUIBlock.Features.AlphaCutoff
             ^ SurfaceOptionUIBlock.Features.BackThenFrontRendering
             ^ SurfaceOptionUIBlock.Features.ShowAfterPostProcessPass;
-        
+
         MaterialUIBlockList uiBlocks = new MaterialUIBlockList
         {
             new SurfaceOptionUIBlock(MaterialUIBlock.Expandable.Base, features: surfaceOptionFeatures),
@@ -39,7 +41,8 @@ namespace UnityEditor.Rendering.HighDefinition
             }
         }
 
-        public static void SetupMaterialKeywordsAndPass(Material material)
+        //public static void SetupMaterialKeywordsAndPass(Material material)
+        public void SetupMaterialKeywordsAndPass(Material material)
         {
             SynchronizeShaderGraphProperties(material);
 
@@ -51,6 +54,55 @@ namespace UnityEditor.Rendering.HighDefinition
             if (material.HasProperty(kAddPrecomputedVelocity))
             {
                 CoreUtils.SetKeyword(material, "_ADD_PRECOMPUTED_VELOCITY", material.GetInt(kAddPrecomputedVelocity) != 0);
+            }
+
+            SpeedTreeLitOptionsUIBlock block = uiBlocks.FetchUIBlock<SpeedTreeLitOptionsUIBlock>();
+
+            material.EnableKeyword(KeywordUtil.ToKeywordString(HDSpeedTreeTarget.SpeedTreeVersion, (int)block.mAssetVersion));
+            //material.EnableKeyword("_ALPHATEST_ON");
+
+            /*
+            if (block.mAssetVersion == SpeedTreeLitOptionsUIBlock.SpeedTreeVersionEnum.SpeedTreeVer7)
+            {
+                material.EnableKeyword(KeywordUtil.ToKeywordString(HDSpeedTreeTarget.SpeedTree7GeomType, (int)block.mGeomType));
+            }
+            else if (block.mWindEnable)
+            {
+                material.EnableKeyword(KeywordUtil.ToKeywordString(HDSpeedTreeTarget.SpeedTree8WindQuality, (int)block.mWindQuality));
+            }
+            */
+
+            CoreUtils.SetKeyword(material, "EFFECT_BILLBOARD", block.mBillboard);
+            CoreUtils.SetKeyword(material, "BILLBOARD_FACE_CAMERA_POS", block.mBillboard && block.mBillboardFacing);
+
+            if (material.HasProperty(SpeedTreeLitOptionsUIBlock.kWindEnable))
+            {
+                bool windOn = material.GetInt(SpeedTreeLitOptionsUIBlock.kWindEnable) != 0;
+                CoreUtils.SetKeyword(material, "ENABLE_WIND", windOn);
+                //material.EnableKeyword(KeywordUtil.ToKeywordString(HDSpeedTreeTarget.SpeedTree8WindQuality, ))
+            }
+            else
+            {
+                CoreUtils.SetKeyword(material, "ENABLE_WIND", block.mWindEnable);
+                if ((block.mAssetVersion == SpeedTreeLitOptionsUIBlock.SpeedTreeVersionEnum.SpeedTreeVer8) && (block.mWindEnable))
+                {
+                    material.EnableKeyword(KeywordUtil.ToKeywordString(HDSpeedTreeTarget.SpeedTree8WindQuality, (int)block.mWindQuality));
+                }
+                else
+                {
+                    material.EnableKeyword(KeywordUtil.ToKeywordString(HDSpeedTreeTarget.SpeedTree8WindQuality, HDSpeedTreeTarget.kNullWindQuality));
+                }
+            }
+
+            // Only SpeedTree 7 assets should have a GeomType property.
+            if (material.HasProperty(SpeedTreeLitOptionsUIBlock.kGeomType))
+            {
+                int v = material.GetInt(SpeedTreeLitOptionsUIBlock.kGeomType);
+                material.EnableKeyword(KeywordUtil.ToKeywordString(HDSpeedTreeTarget.SpeedTree7GeomType, v));
+            }
+            else
+            {
+                material.EnableKeyword(KeywordUtil.ToKeywordString(HDSpeedTreeTarget.SpeedTree7GeomType, HDSpeedTreeTarget.kNullGeomType));
             }
 
             /*

@@ -20,10 +20,41 @@ namespace UnityEditor.Rendering.HighDefinition
             public static GUIContent windQualityText = new GUIContent("Wind Quality", "Detail level of the wind effect");
             public static GUIContent billboardText = new GUIContent("Billboard", "This surface is a billboard");
             public static GUIContent billboardFacingText = new GUIContent("Billboard Camera Facing", "Factor which affects billboard's impact on shadows");
-            public static GUIContent zBiasText = new GUIContent("Depth-Only Bias", "Depth bias used on depth-only passes; clears z-fighting artifacts");
         }
 
         Expandable m_ExpandableBit;
+
+        public enum SpeedTreeVersionEnum
+        {
+            SpeedTreeVer7 = 0,
+            SpeedTreeVer8,
+        }
+
+        public enum SpeedTree7Geom
+        {
+            Branch,
+            BranchDetail,
+            Frond,
+            Leaf,
+            Mesh,
+        }
+
+        public enum WindQualityEnum
+        {
+            None,
+            Fastest,
+            Fast,
+            Better,
+            Best,
+            Palm,
+        }
+
+        public SpeedTreeVersionEnum mAssetVersion = SpeedTreeVersionEnum.SpeedTreeVer7;
+        public SpeedTree7Geom mGeomType = SpeedTree7Geom.Branch;
+        public bool mWindEnable = true;
+        public WindQualityEnum mWindQuality = WindQualityEnum.Best;
+        public bool mBillboard = false;
+        public bool mBillboardFacing = false;
 
         MaterialProperty geomType = null;
         public const string kGeomType = "_SpeedTreeGeom";
@@ -75,12 +106,34 @@ namespace UnityEditor.Rendering.HighDefinition
             }
         }
 
+        void DrawSpeedTreeKeywordsGUI()
+        {
+            mAssetVersion = (SpeedTreeVersionEnum)EditorGUILayout.EnumPopup(mAssetVersion);
+
+            if (windEnable == null || windQuality == null)
+            {
+                mWindEnable = EditorGUILayout.Toggle(Styles.enableWindText, mWindEnable);
+                if (mWindEnable)
+                    mWindQuality = (WindQualityEnum)EditorGUILayout.EnumPopup(Styles.windQualityText, mWindQuality);
+            }
+
+            return;
+            if (mAssetVersion == SpeedTreeVersionEnum.SpeedTreeVer7)
+                mGeomType = (SpeedTree7Geom)EditorGUILayout.EnumPopup(Styles.typeText, mGeomType);
+
+            mBillboard = EditorGUILayout.Toggle(Styles.billboardText, mBillboard);
+            mBillboardFacing = EditorGUILayout.Toggle(Styles.billboardFacingText, mBillboardFacing);
+        }
+
         public override void OnGUI()
         {
             using (var header = new MaterialHeaderScope(Styles.SpeedTreeHeader, (uint)m_ExpandableBit, materialEditor))
             {
                 if (header.expanded)
+                {
                     DrawSpeedTreeInputsGUI();
+                    DrawSpeedTreeKeywordsGUI();
+                }
             }
         }
     }

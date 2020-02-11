@@ -14,9 +14,6 @@ namespace UnityEditor.Rendering.HighDefinition.ShaderGraph
         public string passTemplatePath => string.Empty;
         public string sharedTemplateDirectory => $"{HDUtils.GetHDRenderPipelinePath()}Editor/ShaderGraph/Templates";
 
-        public static FieldDescriptor SpeedTreeV7Field = new FieldDescriptor("SpeedTree", "Version 7", "SPEEDTREE_V7");
-        public static FieldDescriptor SpeedTreeV8Field = new FieldDescriptor("SpeedTree", "Version 8", "SPEEDTREE_V8");
-
         public static KeywordDescriptor SpeedTreeVersion = new KeywordDescriptor()
         {
             displayName = "SpeedTree Asset Version",
@@ -68,8 +65,11 @@ namespace UnityEditor.Rendering.HighDefinition.ShaderGraph
                 new KeywordEntry() { displayName = "Frond", referenceName="FROND" },
                 new KeywordEntry() { displayName = "Leaf", referenceName="LEAF" },
                 new KeywordEntry() { displayName = "Mesh", referenceName="MESH" },
+                new KeywordEntry() { displayName = "Null", referenceName="NULL"},       // Included as a dummy for SpeedTree 8
             }
         };
+
+        public const int kNullGeomType = 5;
 
         public static KeywordDescriptor SpeedTree8WindQuality = new KeywordDescriptor()
         {
@@ -86,8 +86,11 @@ namespace UnityEditor.Rendering.HighDefinition.ShaderGraph
                 new KeywordEntry() { displayName = "Better", referenceName="BETTER" },
                 new KeywordEntry() { displayName = "Best", referenceName="BEST" },
                 new KeywordEntry() { displayName = "Palm", referenceName="PALM" },
+                new KeywordEntry() { displayName = "Null", referenceName="NULL" },     // Included as a dummy for SpeedTree 7
             }
         };
+
+        public const int kNullWindQuality = 6;
 
         public static PragmaDescriptor EnableWind = new PragmaDescriptor()
         {
@@ -125,11 +128,13 @@ namespace UnityEditor.Rendering.HighDefinition.ShaderGraph
                 p.descriptor.pragmas.Add(EnableWind);
                 p.descriptor.pragmas.Add(EnableBillboard);
 
-                p.descriptor.keywords.Add(SpeedTree7GeomType, new FieldCondition(SpeedTreeV7Field, true));
-                p.descriptor.keywords.Add(SpeedTree8WindQuality, new FieldCondition(SpeedTreeV8Field, true));
+                //p.descriptor.keywords.Add(SpeedTree7GeomType);
+                //p.descriptor.keywords.Add(SpeedTree8WindQuality);
 
                 p.descriptor.includes.Add("Packages/com.unity.render-pipelines.core/ShaderLibrary/SpeedTree/SpeedTreeCommon.hlsl", IncludeLocation.Pregraph);
             }
+
+            modDescriptor.customEditorOverride = @"CustomEditor ""UnityEditor.Rendering.HighDefinition.SpeedTreeLitGUI""";
 
             return modDescriptor;
         }
@@ -153,7 +158,7 @@ namespace UnityEditor.Rendering.HighDefinition.ShaderGraph
                     break;
                 case HDLitMasterNode hdLitMasterNode:
                     context.SetupSubShader(UpdateSubShader(ref HDSubShaders.HDLit));
-                    hdLitMasterNode.alphaTest = new ToggleData(true);
+                    //hdLitMasterNode.alphaTest = new ToggleData(true);
                     break;
                 case FabricMasterNode fabricMasterNode:
                     context.SetupSubShader(UpdateSubShader(ref HDSubShaders.Fabric));
