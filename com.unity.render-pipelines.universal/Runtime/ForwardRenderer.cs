@@ -175,6 +175,7 @@ namespace UnityEngine.Rendering.Universal
 #endif
             bool createColorTexture = RequiresIntermediateColorTexture(ref renderingData, cameraTargetDescriptor) ||
                 (rendererFeatures.Count != 0 && !isRunningHololens);
+            createColorTexture &= !isStereoEnabled;  // TODO: Could this replace isRunningHololens?
 
             // If camera requires depth and there's no depth pre-pass we create a depth texture that can be read later by effect requiring it.
             bool createDepthTexture = cameraData.requiresDepthTexture && !requiresDepthPrepass;
