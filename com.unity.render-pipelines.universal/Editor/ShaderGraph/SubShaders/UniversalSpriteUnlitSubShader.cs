@@ -97,14 +97,27 @@ namespace UnityEditor.Experimental.Rendering.Universal
             baseActiveFields.Add("features.graphPixel");
 
             baseActiveFields.Add("SurfaceType.Transparent");
-            baseActiveFields.Add("BlendMode.Alpha");
+            
+            // #pragma shader_feature _ _BLENDMODE_ALPHA _BLENDMODE_ADD _BLENDMODE_PRE_MULTIPLY
+            if (masterNode.alphaMode == AlphaMode.Alpha)
+            {
+                baseActiveFields.Add("BlendMode.Alpha");
+            }
+            else if (masterNode.alphaMode == AlphaMode.Additive)
+            {
+                baseActiveFields.Add("BlendMode.Add");
+            }
+            else if (masterNode.alphaMode == AlphaMode.Premultiply)
+            {
+                baseActiveFields.Add("BlendMode.Premultiply");
+            }
 
             return activeFields;
         }
 
         private static bool GenerateShaderPass(SpriteUnlitMasterNode masterNode, ShaderPass pass, GenerationMode mode, ShaderGenerator result, List<string> sourceAssetDependencyPaths)
         {
-            UniversalShaderGraphUtilities.SetRenderState(SurfaceType.Transparent, AlphaMode.Alpha, true, ref pass);
+            UniversalShaderGraphUtilities.SetRenderState(SurfaceType.Transparent, masterNode.alphaMode, true, ref pass);
 
             // apply master node options to active fields
             var activeFields = GetActiveFieldsFromMasterNode(masterNode, pass);

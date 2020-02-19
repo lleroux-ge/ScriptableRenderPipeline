@@ -234,14 +234,27 @@ namespace UnityEditor.Experimental.Rendering.Universal
             baseActiveFields.Add("features.graphPixel");
 
             baseActiveFields.Add("SurfaceType.Transparent");
-            baseActiveFields.Add("BlendMode.Alpha");
+
+            // #pragma shader_feature _ _BLENDMODE_ALPHA _BLENDMODE_ADD _BLENDMODE_PRE_MULTIPLY
+            if (masterNode.alphaMode == AlphaMode.Alpha)
+            {
+                baseActiveFields.Add("BlendMode.Alpha");
+            }
+            else if (masterNode.alphaMode == AlphaMode.Additive)
+            {
+                baseActiveFields.Add("BlendMode.Add");
+            }
+            else if (masterNode.alphaMode == AlphaMode.Premultiply)
+            {
+                baseActiveFields.Add("BlendMode.Premultiply");
+            }
 
             return activeFields;
         }
 
-        private static bool GenerateShaderPass(SpriteLitMasterNode masterNode, ShaderPass pass, GenerationMode mode, ShaderGenerator result, List<string> sourceAssetDependencyPaths)
+        private static bool GenerateShaderPass(SpriteLitMasterNode masterNode, ShaderPass pass, AlphaMode alphaMode, GenerationMode mode, ShaderGenerator result, List<string> sourceAssetDependencyPaths)
         {
-            UniversalShaderGraphUtilities.SetRenderState(SurfaceType.Transparent, AlphaMode.Alpha, true, ref pass);
+            UniversalShaderGraphUtilities.SetRenderState(SurfaceType.Transparent, alphaMode, true, ref pass);
 
             // apply master node options to active fields
             var activeFields = GetActiveFieldsFromMasterNode(masterNode, pass);
@@ -272,9 +285,9 @@ namespace UnityEditor.Experimental.Rendering.Universal
                 surfaceTags.GetTags(tagsBuilder, "UniversalPipeline");
                 subShader.AddShaderChunk(tagsBuilder.ToString());
 
-                GenerateShaderPass(litMasterNode, m_LitPass, mode, subShader, sourceAssetDependencyPaths);
-                GenerateShaderPass(litMasterNode, m_NormalPass, mode, subShader, sourceAssetDependencyPaths);
-                GenerateShaderPass(litMasterNode, m_ForwardPass, mode, subShader, sourceAssetDependencyPaths);
+                GenerateShaderPass(litMasterNode, m_LitPass, litMasterNode.alphaMode, mode, subShader, sourceAssetDependencyPaths);
+                GenerateShaderPass(litMasterNode, m_NormalPass, AlphaMode.Alpha, mode, subShader, sourceAssetDependencyPaths);
+                GenerateShaderPass(litMasterNode, m_ForwardPass, litMasterNode.alphaMode, mode, subShader, sourceAssetDependencyPaths);
             }
             subShader.Deindent();
             subShader.AddShaderChunk("}", true);

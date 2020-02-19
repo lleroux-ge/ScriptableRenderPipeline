@@ -27,11 +27,31 @@ namespace UnityEditor.Experimental.Rendering.Universal
         public const int VertNormalSlotId = 10;
         public const int VertTangentSlotId = 11;
 
+        [SerializeField]
+        AlphaMode m_AlphaMode = AlphaMode.Alpha;
+
+        public AlphaMode alphaMode
+        {
+            get { return m_AlphaMode; }
+            set
+            {
+                if (m_AlphaMode == value)
+                    return;
+
+                m_AlphaMode = value;
+                Dirty(ModificationScope.Graph);
+            }
+        }
+
         public SpriteUnlitMasterNode()
         {
             UpdateNodeAfterDeserialization();
         }
 
+        protected override VisualElement CreateCommonSettingsElement()
+        {
+            return new SpriteUnlitSettingsView(this);
+        }
 
         public sealed override void UpdateNodeAfterDeserialization()
         {

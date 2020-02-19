@@ -5,6 +5,10 @@ using UnityEditor.Graphing;
 using UnityEngine;
 using UnityEditor.ShaderGraph;
 using UnityEditor.ShaderGraph.Internal;
+using UnityEditor.ShaderGraph.Drawing;
+using UnityEditor.ShaderGraph.Drawing.Controls;
+using UnityEditor.UIElements;
+using UnityEngine.UIElements;
 
 namespace UnityEditor.Experimental.Rendering.Universal
 {
@@ -27,11 +31,31 @@ namespace UnityEditor.Experimental.Rendering.Universal
         public const int VertNormalSlotId = 10;
         public const int VertTangentSlotId = 11;
 
+        [SerializeField]
+        AlphaMode m_AlphaMode = AlphaMode.Alpha;
+
+        public AlphaMode alphaMode
+        {
+            get { return m_AlphaMode; }
+            set
+            {
+                if (m_AlphaMode == value)
+                    return;
+
+                m_AlphaMode = value;
+                Dirty(ModificationScope.Graph);
+            }
+        }
+
         public SpriteLitMasterNode()
         {
             UpdateNodeAfterDeserialization();
         }
 
+        protected override VisualElement CreateCommonSettingsElement()
+        {
+            return new SpriteLitSettingsView(this);
+        }
 
         public sealed override void UpdateNodeAfterDeserialization()
         {
